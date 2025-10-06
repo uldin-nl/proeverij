@@ -127,46 +127,55 @@ export default function ShowSession({
     });
 
     // Real-time updates
+    type BroadcastEvent = {
+        participant?: Participant;
+        review?: Review;
+        roundId?: number;
+        averageRating?: number;
+        currentRound?: number;
+        status?: string;
+        newCurrentRound?: TastingRound;
+    };
+
     useEffect(() => {
         const channel = window.Echo.private(`tasting-session.${session.id}`);
 
-        // Listen for new participants
-        channel.listen('ParticipantJoined', (e: any) => {
-            setSession((prev) => ({
-                ...prev,
-                participants: [...prev.participants, e.participant],
-            }));
+        channel.listen('ParticipantJoined', (e: BroadcastEvent) => {
+            if (e.participant) {
+                setSession((prev) => ({
+                    ...prev,
+                    participants: [...prev.participants, e.participant as Participant],
+                }));
+            }
         });
 
-        // Listen for new reviews
-        channel.listen('ReviewSubmitted', (e: any) => {
-            if (currentRound && e.roundId === currentRound.id) {
+        channel.listen('ReviewSubmitted', (e: BroadcastEvent) => {
+            if (currentRound && e.roundId === currentRound.id && e.review) {
                 setCurrentRound((prev) =>
                     prev
                         ? {
                               ...prev,
                               reviews: [
                                   ...prev.reviews.filter(
-                                      (r) => r.id !== e.review.id,
+                                      (r) => r.id !== e.review!.id,
                                   ),
-                                  e.review,
+                                  e.review!,
                               ],
-                              average_rating: e.averageRating,
+                              average_rating: e.averageRating ?? prev.average_rating,
                           }
                         : prev,
                 );
             }
         });
 
-        // Listen for round status changes
-        channel.listen('RoundStatusChanged', (e: any) => {
+        channel.listen('RoundStatusChanged', (e: BroadcastEvent) => {
             setSession((prev) => ({
                 ...prev,
-                current_round: e.currentRound,
+                current_round: e.currentRound ?? prev.current_round,
                 rounds: prev.rounds.map((round) =>
                     round.id === e.roundId
-                        ? { ...round, status: e.status }
-                        : round,
+                        ? { ...round, status: (e.status ?? round.status) as TastingRound['status'] }
+                        : round
                 ),
             }));
 
@@ -175,14 +184,12 @@ export default function ShowSession({
             }
         });
 
-        // Listen for session status changes
-        channel.listen('SessionStatusChanged', (e: any) => {
+        channel.listen('SessionStatusChanged', (e: BroadcastEvent) => {
             setSession((prev) => ({
                 ...prev,
-                status: e.status,
+                status: (e.status ?? prev.status) as TastingSession['status'],
             }));
 
-            // Redirect to results if session completed
             if (e.status === 'completed') {
                 setTimeout(() => {
                     router.visit(`/tasting/sessions/${session.id}/results`);
@@ -196,14 +203,14 @@ export default function ShowSession({
             channel.stopListening('RoundStatusChanged');
             channel.stopListening('SessionStatusChanged');
         };
-    }, [session.id, currentRound?.id]);
+    }, [session.id, currentRound]);
 
     const copyInviteCode = async () => {
         try {
             await navigator.clipboard.writeText(session.invite_code);
             setCopiedCode(true);
             setTimeout(() => setCopiedCode(false), 2000);
-        } catch (err) {
+        } catch {
             console.error('Failed to copy invite code');
         }
     };

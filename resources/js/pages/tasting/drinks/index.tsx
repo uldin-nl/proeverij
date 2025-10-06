@@ -30,8 +30,8 @@ interface Drink {
 interface Props {
     drinks: {
         data: Drink[];
-        links: any;
-        meta: any;
+        links: Record<string, unknown>;
+        meta: Record<string, unknown>;
     };
 }
 

@@ -53,8 +53,8 @@ interface Session {
 interface Props {
     sessions: {
         data: Session[];
-        links: any;
-        meta: any;
+        links: Record<string, unknown>;
+        meta: { total?: number } & Record<string, unknown>;
     };
 }
 
@@ -66,8 +66,14 @@ export default function SessionsIndex({ sessions: initialSessions }: Props) {
     });
 
     // Real-time updates for session status changes
+    type BroadcastEvent = {
+        status?: Session['status'];
+        currentRound?: number;
+        participant?: Session['participants'][0];
+    };
+
     useEffect(() => {
-        const channels: any[] = [];
+        const channels: ReturnType<typeof window.Echo.private>[] = [];
 
         // Listen to each session for status updates
         sessions.data.forEach((session) => {
@@ -77,33 +83,33 @@ export default function SessionsIndex({ sessions: initialSessions }: Props) {
             channels.push(channel);
 
             // Listen for session status changes
-            channel.listen('SessionStatusChanged', (e: any) => {
+            channel.listen('SessionStatusChanged', (e: BroadcastEvent) => {
                 setSessions((prev) => ({
                     ...prev,
                     data: prev.data.map((s) =>
-                        s.id === session.id ? { ...s, status: e.status } : s,
+                        s.id === session.id ? { ...s, status: e.status ?? s.status } : s,
                     ),
                 }));
             });
 
             // Listen for round status changes
-            channel.listen('RoundStatusChanged', (e: any) => {
+            channel.listen('RoundStatusChanged', (e: BroadcastEvent) => {
                 setSessions((prev) => ({
                     ...prev,
                     data: prev.data.map((s) =>
                         s.id === session.id
-                            ? { ...s, current_round: e.currentRound }
+                            ? { ...s, current_round: e.currentRound ?? s.current_round }
                             : s,
                     ),
                 }));
             });
 
             // Listen for new participants
-            channel.listen('ParticipantJoined', (e: any) => {
+            channel.listen('ParticipantJoined', (e: BroadcastEvent) => {
                 setSessions((prev) => ({
                     ...prev,
                     data: prev.data.map((s) =>
-                        s.id === session.id
+                        s.id === session.id && e.participant
                             ? {
                                   ...s,
                                   participants: [

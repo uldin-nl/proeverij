@@ -11,7 +11,12 @@ import { initializeTheme } from './hooks/use-appearance';
 declare global {
     interface Window {
         Pusher: typeof Pusher;
-        Echo: any;
+        Echo: {
+            private: (channel: string) => {
+                listen: (event: string, callback: (e: Record<string, unknown>) => void) => void;
+                stopListening: (event: string) => void;
+            };
+        };
     }
 }
 
