@@ -87,7 +87,9 @@ export default function SessionsIndex({ sessions: initialSessions }: Props) {
                 setSessions((prev) => ({
                     ...prev,
                     data: prev.data.map((s) =>
-                        s.id === session.id ? { ...s, status: e.status ?? s.status } : s,
+                        s.id === session.id
+                            ? { ...s, status: e.status ?? s.status }
+                            : s,
                     ),
                 }));
             });
@@ -98,7 +100,11 @@ export default function SessionsIndex({ sessions: initialSessions }: Props) {
                     ...prev,
                     data: prev.data.map((s) =>
                         s.id === session.id
-                            ? { ...s, current_round: e.currentRound ?? s.current_round }
+                            ? {
+                                  ...s,
+                                  current_round:
+                                      e.currentRound ?? s.current_round,
+                              }
                             : s,
                     ),
                 }));

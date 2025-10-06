@@ -144,7 +144,10 @@ export default function ShowSession({
             if (e.participant) {
                 setSession((prev) => ({
                     ...prev,
-                    participants: [...prev.participants, e.participant as Participant],
+                    participants: [
+                        ...prev.participants,
+                        e.participant as Participant,
+                    ],
                 }));
             }
         });
@@ -161,7 +164,8 @@ export default function ShowSession({
                                   ),
                                   e.review!,
                               ],
-                              average_rating: e.averageRating ?? prev.average_rating,
+                              average_rating:
+                                  e.averageRating ?? prev.average_rating,
                           }
                         : prev,
                 );
@@ -174,8 +178,12 @@ export default function ShowSession({
                 current_round: e.currentRound ?? prev.current_round,
                 rounds: prev.rounds.map((round) =>
                     round.id === e.roundId
-                        ? { ...round, status: (e.status ?? round.status) as TastingRound['status'] }
-                        : round
+                        ? {
+                              ...round,
+                              status: (e.status ??
+                                  round.status) as TastingRound['status'],
+                          }
+                        : round,
                 ),
             }));
 

@@ -13,7 +13,10 @@ declare global {
         Pusher: typeof Pusher;
         Echo: {
             private: (channel: string) => {
-                listen: (event: string, callback: (e: Record<string, unknown>) => void) => void;
+                listen: (
+                    event: string,
+                    callback: (e: Record<string, unknown>) => void,
+                ) => void;
                 stopListening: (event: string) => void;
             };
         };
