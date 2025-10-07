@@ -38,6 +38,12 @@ class DrinkController extends Controller
 
         Drink::create($validated);
 
+        // Check if we came from session creation page
+        if (request()->header('referer') && str_contains(request()->header('referer'), '/tasting/sessions/create')) {
+            return redirect()->route('tasting.sessions.create')
+                ->with('success', 'Drankje succesvol toegevoegd!');
+        }
+
         return redirect()->route('tasting.drinks.index')
             ->with('success', 'Drankje succesvol toegevoegd!');
     }

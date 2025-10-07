@@ -43,16 +43,18 @@ class TastingSessionController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'max_rounds' => 'required|integer|min:1|max:10',
             'drink_ids' => 'required|array|min:1',
             'drink_ids.*' => 'exists:drinks,id',
         ]);
+
+        // Automatically calculate max_rounds based on number of drinks
+        $maxRounds = count($validated['drink_ids']);
 
         $session = TastingSession::create([
             'name' => $validated['name'],
             'description' => $validated['description'],
             'host_id' => Auth::id(),
-            'max_rounds' => $validated['max_rounds'],
+            'max_rounds' => $maxRounds,
         ]);
 
         // Voeg host toe als participant
@@ -64,13 +66,11 @@ class TastingSessionController extends Controller
 
         // Maak rondes aan met de geselecteerde drankjes
         foreach ($validated['drink_ids'] as $index => $drinkId) {
-            if ($index < $validated['max_rounds']) {
-                TastingRound::create([
-                    'tasting_session_id' => $session->id,
-                    'drink_id' => $drinkId,
-                    'round_number' => $index + 1,
-                ]);
-            }
+            TastingRound::create([
+                'tasting_session_id' => $session->id,
+                'drink_id' => $drinkId,
+                'round_number' => $index + 1,
+            ]);
         }
 
         return redirect()->route('tasting.sessions.show', $session)

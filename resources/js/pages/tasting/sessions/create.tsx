@@ -7,6 +7,15 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -19,7 +28,7 @@ import {
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeft, Wine } from 'lucide-react';
+import { ArrowLeft, Plus, Wine } from 'lucide-react';
 import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -56,11 +65,21 @@ export default function CreateSession({ drinks }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         description: '',
-        max_rounds: 5,
         drink_ids: [] as number[],
     });
 
     const [selectedDrinks, setSelectedDrinks] = useState<number[]>([]);
+    const [drinksList, setDrinksList] = useState<Drink[]>(drinks);
+    const [addDrinkOpen, setAddDrinkOpen] = useState(false);
+    
+    const { data: drinkData, setData: setDrinkData, post: postDrink, processing: drinkProcessing, errors: drinkErrors, reset: resetDrinkForm } = useForm({
+        name: '',
+        description: '',
+        type: 'beer',
+        brand: '',
+        origin: '',
+        alcohol_percentage: '',
+    });
 
     const handleDrinkToggle = (drinkId: number) => {
         const newSelection = selectedDrinks.includes(drinkId)
@@ -69,6 +88,26 @@ export default function CreateSession({ drinks }: Props) {
 
         setSelectedDrinks(newSelection);
         setData('drink_ids', newSelection);
+    };
+
+    const handleAddDrink = (e: React.FormEvent) => {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent event bubbling to parent form
+        
+        // Save to backend
+        postDrink('/tasting/drinks', {
+            onSuccess: () => {
+                // Close modal and reset form
+                resetDrinkForm();
+                setAddDrinkOpen(false);
+                
+                // Reload the page to get the updated drinks list with real IDs
+                window.location.reload();
+            },
+            onError: (errors) => {
+                console.error('Error adding drink:', errors);
+            }
+        });
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -160,37 +199,15 @@ export default function CreateSession({ drinks }: Props) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="max_rounds">
-                                        Aantal rondes *
-                                    </Label>
-                                    <Select
-                                        value={data.max_rounds.toString()}
-                                        onValueChange={(value) =>
-                                            setData(
-                                                'max_rounds',
-                                                parseInt(value),
-                                            )
-                                        }
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {[
-                                                1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-                                            ].map((num) => (
-                                                <SelectItem
-                                                    key={num}
-                                                    value={num.toString()}
-                                                >
-                                                    {num}{' '}
-                                                    {num === 1
-                                                        ? 'ronde'
-                                                        : 'rondes'}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <Label>Rondes</Label>
+                                    <div className="rounded-md bg-muted p-3">
+                                        <p className="text-sm text-muted-foreground">
+                                            Het aantal rondes wordt automatisch bepaald op basis van de geselecteerde drankjes.
+                                        </p>
+                                        <p className="mt-1 text-sm font-medium">
+                                            Huidig aantal rondes: {selectedDrinks.length}
+                                        </p>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
@@ -200,8 +217,7 @@ export default function CreateSession({ drinks }: Props) {
                             <CardHeader>
                                 <CardTitle>Geselecteerde drankjes</CardTitle>
                                 <CardDescription>
-                                    {selectedDrinks.length} van max{' '}
-                                    {data.max_rounds} drankjes geselecteerd
+                                    {selectedDrinks.length} drankjes geselecteerd voor {selectedDrinks.length} rondes
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
@@ -214,41 +230,39 @@ export default function CreateSession({ drinks }: Props) {
                                     </div>
                                 ) : (
                                     <div className="space-y-2">
-                                        {selectedDrinks
-                                            .slice(0, data.max_rounds)
-                                            .map((drinkId, index) => {
-                                                const drink = drinks.find(
-                                                    (d) => d.id === drinkId,
-                                                );
-                                                return drink ? (
-                                                    <div
-                                                        key={drinkId}
-                                                        className="flex items-center justify-between rounded-md bg-muted p-2"
-                                                    >
-                                                        <div>
-                                                            <span className="font-medium">
-                                                                Ronde{' '}
-                                                                {index + 1}:
-                                                            </span>
-                                                            <span className="ml-2">
-                                                                {drink.name}
-                                                            </span>
-                                                        </div>
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() =>
-                                                                handleDrinkToggle(
-                                                                    drinkId,
-                                                                )
-                                                            }
-                                                        >
-                                                            ✕
-                                                        </Button>
+                                        {selectedDrinks.map((drinkId, index) => {
+                                            const drink = drinksList.find(
+                                                (d) => d.id === drinkId,
+                                            );
+                                            return drink ? (
+                                                <div
+                                                    key={drinkId}
+                                                    className="flex items-center justify-between rounded-md bg-muted p-2"
+                                                >
+                                                    <div>
+                                                        <span className="font-medium">
+                                                            Ronde{' '}
+                                                            {index + 1}:
+                                                        </span>
+                                                        <span className="ml-2">
+                                                            {drink.name}
+                                                        </span>
                                                     </div>
-                                                ) : null;
-                                            })}
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            handleDrinkToggle(
+                                                                drinkId,
+                                                            )
+                                                        }
+                                                    >
+                                                        ✕
+                                                    </Button>
+                                                </div>
+                                            ) : null;
+                                        })}
                                     </div>
                                 )}
                                 {errors.drink_ids && (
@@ -263,15 +277,140 @@ export default function CreateSession({ drinks }: Props) {
                     {/* Drinks Selection */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Selecteer drankjes</CardTitle>
-                            <CardDescription>
-                                Kies de drankjes die tijdens de proeverij
-                                geproefd worden. Je kunt maximaal{' '}
-                                {data.max_rounds} drankjes selecteren.
-                            </CardDescription>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle>Selecteer drankjes</CardTitle>
+                                    <CardDescription>
+                                        Kies de drankjes die tijdens de proeverij geproefd worden. 
+                                        Het aantal rondes wordt automatisch bepaald.
+                                    </CardDescription>
+                                </div>
+                                <Dialog open={addDrinkOpen} onOpenChange={setAddDrinkOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" size="sm">
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Drankje toevoegen
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Nieuw drankje toevoegen</DialogTitle>
+                                            <DialogDescription>
+                                                Voeg een nieuw drankje toe aan de database.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <form onSubmit={handleAddDrink} className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="drink-name">Naam *</Label>
+                                                <Input
+                                                    id="drink-name"
+                                                    type="text"
+                                                    placeholder="Bijv. Heineken"
+                                                    value={drinkData.name}
+                                                    onChange={(e) => setDrinkData('name', e.target.value)}
+                                                    className={drinkErrors.name ? 'border-red-500' : ''}
+                                                />
+                                                {drinkErrors.name && (
+                                                    <p className="text-sm text-red-500">{drinkErrors.name}</p>
+                                                )}
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label htmlFor="drink-type">Type *</Label>
+                                                <Select
+                                                    value={drinkData.type}
+                                                    onValueChange={(value) => setDrinkData('type', value)}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="beer">Bier</SelectItem>
+                                                        <SelectItem value="wine">Wijn</SelectItem>
+                                                        <SelectItem value="spirits">Sterke drank</SelectItem>
+                                                        <SelectItem value="cocktail">Cocktail</SelectItem>
+                                                        <SelectItem value="other">Anders</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label htmlFor="drink-brand">Merk</Label>
+                                                <Input
+                                                    id="drink-brand"
+                                                    type="text"
+                                                    placeholder="Bijv. Heineken"
+                                                    value={drinkData.brand}
+                                                    onChange={(e) => setDrinkData('brand', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label htmlFor="drink-origin">Herkomst</Label>
+                                                <Input
+                                                    id="drink-origin"
+                                                    type="text"
+                                                    placeholder="Bijv. Nederland"
+                                                    value={drinkData.origin}
+                                                    onChange={(e) => setDrinkData('origin', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label htmlFor="drink-alcohol">Alcoholpercentage</Label>
+                                                <Input
+                                                    id="drink-alcohol"
+                                                    type="number"
+                                                    step="0.1"
+                                                    min="0"
+                                                    max="100"
+                                                    placeholder="Bijv. 5.0"
+                                                    value={drinkData.alcohol_percentage}
+                                                    onChange={(e) => setDrinkData('alcohol_percentage', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label htmlFor="drink-description">Beschrijving</Label>
+                                                <Input
+                                                    id="drink-description"
+                                                    type="text"
+                                                    placeholder="Optionele beschrijving..."
+                                                    value={drinkData.description}
+                                                    onChange={(e) => setDrinkData('description', e.target.value)}
+                                                />
+                                            </div>
+
+                                            <DialogFooter>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        resetDrinkForm();
+                                                        setAddDrinkOpen(false);
+                                                    }}
+                                                >
+                                                    Annuleren
+                                                </Button>
+                                                <Button
+                                                    type="submit"
+                                                    disabled={drinkProcessing || !drinkData.name}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                    }}
+                                                >
+                                                    {drinkProcessing ? 'Bezig...' : 'Toevoegen'}
+                                                </Button>
+                                            </DialogFooter>
+                                        </form>
+                                    </DialogContent>
+                                </Dialog>
+                            </div>
                         </CardHeader>
                         <CardContent>
-                            {drinks.length === 0 ? (
+                            {drinksList.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-12 text-center">
                                     <Wine className="mb-4 h-12 w-12 text-muted-foreground" />
                                     <h3 className="mb-2 text-lg font-medium">
@@ -281,13 +420,13 @@ export default function CreateSession({ drinks }: Props) {
                                         Er zijn nog geen drankjes toegevoegd aan
                                         het systeem
                                     </p>
-                                    <Link href="/tasting/drinks/create">
-                                        <Button>Drankje toevoegen</Button>
-                                    </Link>
+                                    <Button onClick={() => setAddDrinkOpen(true)}>
+                                        Drankje toevoegen
+                                    </Button>
                                 </div>
                             ) : (
                                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                    {drinks.map((drink) => (
+                                    {drinksList.map((drink) => (
                                         <div
                                             key={drink.id}
                                             className={`cursor-pointer rounded-lg border p-4 transition-colors ${
@@ -296,25 +435,9 @@ export default function CreateSession({ drinks }: Props) {
                                                 )
                                                     ? 'border-primary bg-primary/5'
                                                     : 'border-border hover:border-primary/50'
-                                            } ${
-                                                selectedDrinks.length >=
-                                                    data.max_rounds &&
-                                                !selectedDrinks.includes(
-                                                    drink.id,
-                                                )
-                                                    ? 'cursor-not-allowed opacity-50'
-                                                    : ''
                                             }`}
                                             onClick={() => {
-                                                if (
-                                                    selectedDrinks.length <
-                                                        data.max_rounds ||
-                                                    selectedDrinks.includes(
-                                                        drink.id,
-                                                    )
-                                                ) {
-                                                    handleDrinkToggle(drink.id);
-                                                }
+                                                handleDrinkToggle(drink.id);
                                             }}
                                         >
                                             <div className="flex items-start justify-between">
