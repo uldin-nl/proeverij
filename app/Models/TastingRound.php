@@ -22,6 +22,10 @@ class TastingRound extends Model
         'completed_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'average_rating',
+    ];
+
     public function tastingSession(): BelongsTo
     {
         return $this->belongsTo(TastingSession::class);

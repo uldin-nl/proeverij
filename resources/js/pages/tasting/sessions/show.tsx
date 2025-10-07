@@ -1,5 +1,15 @@
 import { Button } from '@/components/ui/button';
 import {
+    Dialog,
+    DialogTrigger,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+    DialogClose,
+    DialogDescription,
+} from '@/components/ui/dialog';
+import {
     Card,
     CardContent,
     CardDescription,
@@ -109,6 +119,12 @@ export default function ShowSession({
     const [copiedCode, setCopiedCode] = useState(false);
     const [session, setSession] = useState(initialSession);
     const [currentRound, setCurrentRound] = useState(initialCurrentRound);
+    const [editOpen, setEditOpen] = useState(false);
+    const [editData, setEditData] = useState({
+        name: initialSession.name,
+        description: initialSession.description || '',
+        max_rounds: initialSession.max_rounds,
+    });
 
     const { post: postStart, processing: startProcessing } = useForm({});
     const { post: postNextRound, processing: nextRoundProcessing } = useForm(
@@ -127,78 +143,113 @@ export default function ShowSession({
     });
 
     // Real-time updates
-    type BroadcastEvent = {
-        participant?: Participant;
-        review?: Review;
-        roundId?: number;
-        averageRating?: number;
-        currentRound?: number;
-        status?: string;
-        newCurrentRound?: TastingRound;
+    type ParticipantJoinedEvent = {
+        participant: Participant;
+        session: TastingSession;
+        message?: string;
+    };
+
+    type ReviewSubmittedEvent = {
+        review: Review;
+        round: TastingRound;
+        message?: string;
+    };
+
+    type RoundStatusChangedEvent = {
+        round: TastingRound;
+        session: TastingSession;
+        previousStatus?: string;
+        message?: string;
+    };
+
+    type SessionStatusChangedEvent = {
+        session: TastingSession;
+        previousStatus?: string;
+        message?: string;
     };
 
     useEffect(() => {
         const channel = window.Echo.private(`tasting-session.${session.id}`);
 
-        channel.listen('ParticipantJoined', (e: BroadcastEvent) => {
+        channel.listen('.participant.joined', (e: ParticipantJoinedEvent) => {
             if (e.participant) {
+                setSession((prev) => {
+                    // Check if participant already exists
+                    const participantExists = prev.participants.some(
+                        (p) => p.id === e.participant.id
+                    );
+                    
+                    if (participantExists) {
+                        return prev; // Don't add duplicate
+                    }
+                    
+                    return {
+                        ...prev,
+                        participants: [...prev.participants, e.participant],
+                    };
+                });
+            }
+        });
+
+        channel.listen('.review.submitted', (e: ReviewSubmittedEvent) => {
+            if (e.review) {
+                // Update current round if it matches
+                if (currentRound && e.round.id === currentRound.id) {
+                    setCurrentRound((prev) =>
+                        prev
+                            ? {
+                                  ...prev,
+                                  reviews: [
+                                      ...(prev.reviews || []).filter((r) => r.id !== e.review.id),
+                                      e.review,
+                                  ],
+                                  average_rating: e.round.average_rating,
+                              }
+                            : prev,
+                    );
+                }
+
+                // Update session rounds list
                 setSession((prev) => ({
                     ...prev,
-                    participants: [
-                        ...prev.participants,
-                        e.participant as Participant,
-                    ],
+                    rounds: prev.rounds.map((round) =>
+                        round.id === e.round.id
+                            ? {
+                                  ...round,
+                                  reviews: [
+                                      ...(round.reviews || []).filter((r) => r.id !== e.review.id),
+                                      e.review,
+                                  ],
+                                  average_rating: e.round.average_rating,
+                              }
+                            : round,
+                    ),
                 }));
             }
         });
 
-        channel.listen('ReviewSubmitted', (e: BroadcastEvent) => {
-            if (currentRound && e.roundId === currentRound.id && e.review) {
-                setCurrentRound((prev) =>
-                    prev
-                        ? {
-                              ...prev,
-                              reviews: [
-                                  ...prev.reviews.filter(
-                                      (r) => r.id !== e.review!.id,
-                                  ),
-                                  e.review!,
-                              ],
-                              average_rating:
-                                  e.averageRating ?? prev.average_rating,
-                          }
-                        : prev,
-                );
-            }
-        });
-
-        channel.listen('RoundStatusChanged', (e: BroadcastEvent) => {
+        channel.listen('.round.status.changed', (e: RoundStatusChangedEvent) => {
             setSession((prev) => ({
                 ...prev,
-                current_round: e.currentRound ?? prev.current_round,
+                current_round: e.session.current_round,
                 rounds: prev.rounds.map((round) =>
-                    round.id === e.roundId
-                        ? {
-                              ...round,
-                              status: (e.status ??
-                                  round.status) as TastingRound['status'],
-                          }
-                        : round,
+                    round.id === e.round.id ? e.round : round,
                 ),
+                status: e.session.status,
             }));
 
-            if (e.newCurrentRound) {
-                setCurrentRound(e.newCurrentRound);
+            if (e.round.status === 'active') {
+                setCurrentRound(e.round);
             }
         });
 
-        channel.listen('SessionStatusChanged', (e: BroadcastEvent) => {
+        channel.listen('.session.status.changed', (e: SessionStatusChangedEvent) => {
             setSession((prev) => ({
                 ...prev,
-                status: (e.status ?? prev.status) as TastingSession['status'],
+                status: e.session.status,
             }));
 
-            if (e.status === 'completed') {
+            if (e.session.status === 'completed') {
                 setTimeout(() => {
                     router.visit(`/tasting/sessions/${session.id}/results`);
                 }, 2000);
@@ -206,12 +257,21 @@ export default function ShowSession({
         });
 
         return () => {
-            channel.stopListening('ParticipantJoined');
-            channel.stopListening('ReviewSubmitted');
-            channel.stopListening('RoundStatusChanged');
-            channel.stopListening('SessionStatusChanged');
+            channel.stopListening('.participant.joined');
+            channel.stopListening('.review.submitted');
+            channel.stopListening('.round.status.changed');
+            channel.stopListening('.session.status.changed');
         };
     }, [session.id, currentRound]);
+
+    // Reset review form when current round changes
+    useEffect(() => {
+        setReviewData({
+            rating: 0,
+            review: '',
+            tags: [] as string[],
+        });
+    }, [currentRound?.id, setReviewData]);
 
     const copyInviteCode = async () => {
         try {
@@ -272,8 +332,8 @@ export default function ShowSession({
         return types[type as keyof typeof types] || type;
     };
 
-    const currentUserReview = currentRound?.reviews.find(
-        (r) => r.user.id === userParticipant?.user.id,
+    const currentUserReview = currentRound?.reviews?.find(
+        (r) => r.user?.id === userParticipant?.user?.id,
     );
 
     return (
@@ -399,17 +459,75 @@ export default function ShowSession({
                             </CardHeader>
                             <CardContent className="space-y-3">
                                 {session.status === 'draft' && (
-                                    <Button
-                                        onClick={handleStartSession}
-                                        disabled={
-                                            startProcessing ||
-                                            session.participants.length < 2
-                                        }
-                                        className="w-full"
-                                    >
-                                        <Play className="h-4 w-4" />
-                                        Start proeverij
-                                    </Button>
+                                    <div className="flex flex-col gap-2">
+                                        <Button
+                                            onClick={handleStartSession}
+                                            disabled={startProcessing}
+                                            className="w-full"
+                                        >
+                                            <Play className="h-4 w-4" />
+                                            Start proeverij
+                                        </Button>
+                                        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                                            <DialogTrigger asChild>
+                                                <Button variant="outline" className="w-full">
+                                                    Bewerken
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent>
+                                                <DialogHeader>
+                                                    <DialogTitle>Proeverij bewerken</DialogTitle>
+                                                    <DialogDescription>
+                                                        Pas de naam, beschrijving en aantal rondes aan.
+                                                    </DialogDescription>
+                                                </DialogHeader>
+                                                <form
+                                                    onSubmit={e => {
+                                                        e.preventDefault();
+                                                        // TODO: Replace with actual update logic (API call)
+                                                        setSession({
+                                                            ...session,
+                                                            name: editData.name,
+                                                            description: editData.description,
+                                                            max_rounds: editData.max_rounds,
+                                                        });
+                                                        setEditOpen(false);
+                                                    }}
+                                                    className="space-y-4"
+                                                >
+                                                    <Label htmlFor="edit-name">Naam</Label>
+                                                    <Input
+                                                        id="edit-name"
+                                                        type="text"
+                                                        value={editData.name}
+                                                        onChange={e => setEditData({ ...editData, name: e.target.value })}
+                                                    />
+                                                    <Label htmlFor="edit-description">Beschrijving</Label>
+                                                    <Input
+                                                        id="edit-description"
+                                                        type="text"
+                                                        value={editData.description}
+                                                        onChange={e => setEditData({ ...editData, description: e.target.value })}
+                                                    />
+                                                    <Label htmlFor="edit-max-rounds">Aantal rondes</Label>
+                                                    <Input
+                                                        id="edit-max-rounds"
+                                                        type="number"
+                                                        min={1}
+                                                        max={20}
+                                                        value={editData.max_rounds}
+                                                        onChange={e => setEditData({ ...editData, max_rounds: Number(e.target.value) })}
+                                                    />
+                                                    <DialogFooter>
+                                                        <DialogClose asChild>
+                                                            <Button type="button" variant="outline">Annuleren</Button>
+                                                        </DialogClose>
+                                                        <Button type="submit">Opslaan</Button>
+                                                    </DialogFooter>
+                                                </form>
+                                            </DialogContent>
+                                        </Dialog>
+                                    </div>
                                 )}
 
                                 {session.status === 'active' &&
@@ -633,17 +751,17 @@ export default function ShowSession({
                             </div>
 
                             {/* Other Reviews */}
-                            {currentRound.reviews.length > 0 && (
+                            {currentRound.reviews?.length > 0 && (
                                 <div className="mt-6 space-y-4">
                                     <h3 className="font-medium">
                                         Andere beoordelingen
                                     </h3>
                                     <div className="grid gap-3 md:grid-cols-2">
                                         {currentRound.reviews
-                                            .filter(
+                                            ?.filter(
                                                 (review) =>
-                                                    review.user.id !==
-                                                    userParticipant?.user.id,
+                                                    review.user?.id !==
+                                                    userParticipant?.user?.id,
                                             )
                                             .map((review) => (
                                                 <div
@@ -652,7 +770,7 @@ export default function ShowSession({
                                                 >
                                                     <div className="mb-2 flex items-center justify-between">
                                                         <span className="text-sm font-medium">
-                                                            {review.user.name}
+                                                            {review.user?.name}
                                                         </span>
                                                         <div className="flex gap-1">
                                                             {[
@@ -731,32 +849,6 @@ export default function ShowSession({
                                         {round.drink.brand &&
                                             ` • ${round.drink.brand}`}
                                     </p>
-                                    {round.status === 'completed' && (
-                                        <div className="flex items-center gap-2 text-xs">
-                                            <div className="flex gap-0.5">
-                                                {[1, 2, 3, 4, 5].map((star) => (
-                                                    <Star
-                                                        key={star}
-                                                        className={`h-3 w-3 ${
-                                                            star <=
-                                                            Math.round(
-                                                                round.average_rating,
-                                                            )
-                                                                ? 'fill-yellow-400 text-yellow-400'
-                                                                : 'text-gray-300'
-                                                        }`}
-                                                    />
-                                                ))}
-                                            </div>
-                                            <span className="text-muted-foreground">
-                                                ({round.reviews.length} review
-                                                {round.reviews.length !== 1
-                                                    ? 's'
-                                                    : ''}
-                                                )
-                                            </span>
-                                        </div>
-                                    )}
                                 </div>
                             ))}
                         </div>

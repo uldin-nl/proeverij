@@ -86,6 +86,11 @@ class TastingSessionController extends Controller
             'rounds.reviews.user'
         ]);
 
+        // Ensure average_rating is calculated for each round
+        $session->rounds->each(function ($round) {
+            $round->average_rating = $round->reviews->avg('rating') ?? 0;
+        });
+
         $userParticipant = $session->participants()
             ->where('user_id', Auth::id())
             ->first();
@@ -94,6 +99,11 @@ class TastingSessionController extends Controller
             ->where('round_number', $session->current_round)
             ->with(['drink', 'reviews.user'])
             ->first();
+
+        // Ensure average_rating is calculated for current round
+        if ($currentRound) {
+            $currentRound->average_rating = $currentRound->reviews->avg('rating') ?? 0;
+        }
 
         return Inertia::render('tasting/sessions/show', [
             'session' => $session,

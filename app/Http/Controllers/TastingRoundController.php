@@ -46,6 +46,9 @@ class TastingRoundController extends Controller
             ]
         );
 
+        // Reload the round to get updated average rating
+        $round->load('reviews');
+
         // Broadcast new/updated review
         broadcast(new \App\Events\ReviewSubmitted($review, $round));
 

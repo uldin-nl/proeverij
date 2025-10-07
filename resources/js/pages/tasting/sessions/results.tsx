@@ -201,7 +201,7 @@ export default function SessionResults({ session, results }: Props) {
                                         Deelnemers
                                     </p>
                                     <p className="text-2xl font-bold">
-                                        {session.participants.length}
+                                        {session.participants?.length || 0}
                                     </p>
                                 </div>
                             </div>
@@ -396,7 +396,7 @@ export default function SessionResults({ session, results }: Props) {
                     </CardHeader>
                     <CardContent>
                         <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-                            {session.participants.map((participant) => (
+                            {session.participants?.map((participant) => (
                                 <div
                                     key={participant.id}
                                     className="flex items-center justify-between rounded-lg bg-muted p-3"

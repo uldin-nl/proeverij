@@ -320,11 +320,11 @@ export default function CreateSession({ drinks }: Props) {
                                             <div className="flex items-start justify-between">
                                                 <div className="flex-1">
                                                     <div className="mb-2 flex items-center gap-2">
-                                                        <Checkbox
-                                                            checked={selectedDrinks.includes(
-                                                                drink.id,
-                                                            )}
-                                                            onChange={() => {}}
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedDrinks.includes(drink.id)}
+                                                            onChange={() => handleDrinkToggle(drink.id)}
+                                                            style={{ accentColor: '#3b82f6', width: 18, height: 18 }}
                                                         />
                                                         <h3 className="font-medium">
                                                             {drink.name}
