@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useClipboard } from '@/hooks/use-clipboard';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, useForm } from '@inertiajs/react';
@@ -117,6 +118,7 @@ export default function ShowSession({
     canManage,
 }: Props) {
     const [copiedCode, setCopiedCode] = useState(false);
+    const [, copy] = useClipboard();
     const [session, setSession] = useState(initialSession);
     const [currentRound, setCurrentRound] = useState(initialCurrentRound);
     const [editOpen, setEditOpen] = useState(false);
@@ -274,11 +276,11 @@ export default function ShowSession({
     }, [currentRound?.id, setReviewData]);
 
     const copyInviteCode = async () => {
-        try {
-            await navigator.clipboard.writeText(session.invite_code);
+        const success = await copy(session.invite_code);
+        if (success) {
             setCopiedCode(true);
             setTimeout(() => setCopiedCode(false), 2000);
-        } catch {
+        } else {
             console.error('Failed to copy invite code');
         }
     };
