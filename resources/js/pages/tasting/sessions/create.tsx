@@ -447,7 +447,7 @@ export default function CreateSession({ drinks }: Props) {
                                                             type="checkbox"
                                                             checked={selectedDrinks.includes(drink.id)}
                                                             onChange={() => handleDrinkToggle(drink.id)}
-                                                            style={{ accentColor: '#3b82f6', width: 18, height: 18 }}
+                                                            style={{ accentColor: 'var(--color-primary)', width: 18, height: 18 }}
                                                         />
                                                         <h3 className="font-medium">
                                                             {drink.name}

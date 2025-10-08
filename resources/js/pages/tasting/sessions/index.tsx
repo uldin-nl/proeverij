@@ -145,22 +145,19 @@ export default function SessionsIndex({ sessions: initialSessions }: Props) {
 
     const getStatusBadge = (status: string) => {
         const variants = {
-            draft: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-            active: 'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-300',
-            completed:
-                'bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-300',
-        };
+            draft: 'bg-muted text-muted-foreground',
+            active: 'bg-primary text-primary-foreground',
+            completed: 'bg-secondary text-foreground',
+        } as const;
 
         const labels = {
             draft: 'Concept',
             active: 'Actief',
             completed: 'Afgerond',
-        };
+        } as const;
 
         return (
-            <span
-                className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${variants[status as keyof typeof variants]}`}
-            >
+            <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${variants[status as keyof typeof variants]}`}>
                 {labels[status as keyof typeof labels]}
             </span>
         );
@@ -173,12 +170,8 @@ export default function SessionsIndex({ sessions: initialSessions }: Props) {
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">
-                            Proeverijen
-                        </h1>
-                        <p className="text-muted-foreground">
-                            Organiseer en deel mee aan borrel proeverijen
-                        </p>
+                        <h1 className="text-2xl font-semibold tracking-tight">Proeverijen</h1>
+                        <p className="text-muted-foreground">Organiseer en doe mee aan borrelproeverijen.</p>
                     </div>
                     <div className="flex gap-3">
                         <Link href="/tasting/sessions/create">

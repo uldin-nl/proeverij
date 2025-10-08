@@ -173,7 +173,7 @@ export default function ShowSession({
     useEffect(() => {
         const channel = window.Echo.private(`tasting-session.${session.id}`);
 
-        channel.listen('.participant.joined', (e: ParticipantJoinedEvent) => {
+        channel.listen('.participant.joined', (e: any) => {
             if (e.participant) {
                 setSession((prev) => {
                     // Check if participant already exists
@@ -193,7 +193,7 @@ export default function ShowSession({
             }
         });
 
-        channel.listen('.review.submitted', (e: ReviewSubmittedEvent) => {
+        channel.listen('.review.submitted', (e: any) => {
             if (e.review) {
                 // Update current round if it matches
                 if (currentRound && e.round.id === currentRound.id) {
@@ -230,7 +230,7 @@ export default function ShowSession({
             }
         });
 
-        channel.listen('.round.status.changed', (e: RoundStatusChangedEvent) => {
+        channel.listen('.round.status.changed', (e: any) => {
             setSession((prev) => ({
                 ...prev,
                 current_round: e.session.current_round,
@@ -245,7 +245,7 @@ export default function ShowSession({
             }
         });
 
-        channel.listen('.session.status.changed', (e: SessionStatusChangedEvent) => {
+        channel.listen('.session.status.changed', (e: any) => {
             setSession((prev) => ({
                 ...prev,
                 status: e.session.status,
@@ -302,22 +302,19 @@ export default function ShowSession({
 
     const getStatusBadge = (status: string) => {
         const variants = {
-            draft: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-            active: 'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-300',
-            completed:
-                'bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-300',
-        };
+            draft: 'bg-muted text-muted-foreground',
+            active: 'bg-primary text-primary-foreground',
+            completed: 'bg-secondary text-foreground',
+        } as const;
 
         const labels = {
             draft: 'Concept',
             active: 'Actief',
             completed: 'Afgerond',
-        };
+        } as const;
 
         return (
-            <span
-                className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${variants[status as keyof typeof variants]}`}
-            >
+            <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${variants[status as keyof typeof variants]}`}>
                 {labels[status as keyof typeof labels]}
             </span>
         );
@@ -642,12 +639,7 @@ export default function ShowSession({
                                                         (star) => (
                                                             <Star
                                                                 key={star}
-                                                                className={`h-4 w-4 ${
-                                                                    star <=
-                                                                    currentUserReview.rating
-                                                                        ? 'fill-yellow-400 text-yellow-400'
-                                                                        : 'text-gray-300'
-                                                                }`}
+                                                                className={`h-4 w-4 ${star <= currentUserReview.rating ? 'fill-primary text-primary' : 'text-muted-foreground/40'}`}
                                                             />
                                                         ),
                                                     )}
@@ -698,14 +690,7 @@ export default function ShowSession({
                                                                 }
                                                                 className="p-1"
                                                             >
-                                                                <Star
-                                                                    className={`h-6 w-6 transition-colors ${
-                                                                        star <=
-                                                                        reviewData.rating
-                                                                            ? 'fill-yellow-400 text-yellow-400'
-                                                                            : 'text-gray-300 hover:text-yellow-200'
-                                                                    }`}
-                                                                />
+                                                                <Star className={`h-6 w-6 transition-colors ${star <= reviewData.rating ? 'fill-primary text-primary' : 'text-muted-foreground/40 hover:text-primary/60'}`} />
                                                             </button>
                                                         ),
                                                     )}
@@ -775,18 +760,8 @@ export default function ShowSession({
                                                             {review.user?.name}
                                                         </span>
                                                         <div className="flex gap-1">
-                                                            {[
-                                                                1, 2, 3, 4, 5,
-                                                            ].map((star) => (
-                                                                <Star
-                                                                    key={star}
-                                                                    className={`h-3 w-3 ${
-                                                                        star <=
-                                                                        review.rating
-                                                                            ? 'fill-yellow-400 text-yellow-400'
-                                                                            : 'text-gray-300'
-                                                                    }`}
-                                                                />
+                                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                                <Star key={star} className={`h-3 w-3 ${star <= review.rating ? 'fill-primary text-primary' : 'text-muted-foreground/40'}`} />
                                                             ))}
                                                         </div>
                                                     </div>

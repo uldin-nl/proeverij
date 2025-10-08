@@ -88,9 +88,9 @@ export default function SessionResults({ session, results }: Props) {
     };
 
     const getRankIcon = (index: number) => {
-        if (index === 0) return <Crown className="h-5 w-5 text-yellow-500" />;
-        if (index === 1) return <Trophy className="h-5 w-5 text-gray-400" />;
-        if (index === 2) return <Trophy className="h-5 w-5 text-amber-600" />;
+        if (index === 0) return <Crown className="h-5 w-5 text-primary" />;
+        if (index === 1) return <Trophy className="h-5 w-5 text-muted-foreground" />;
+        if (index === 2) return <Trophy className="h-5 w-5 text-primary/80" />;
         return (
             <span className="text-lg font-bold text-muted-foreground">
                 #{index + 1}
@@ -99,12 +99,9 @@ export default function SessionResults({ session, results }: Props) {
     };
 
     const getCardStyle = (index: number) => {
-        if (index === 0)
-            return 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/10';
-        if (index === 1)
-            return 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/10';
-        if (index === 2)
-            return 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/10';
+        if (index === 0) return 'border-primary/30 bg-primary/10';
+        if (index === 1) return 'border-border bg-background/50';
+        if (index === 2) return 'border-primary/20 bg-primary/5';
         return '';
     };
 
@@ -243,17 +240,7 @@ export default function SessionResults({ session, results }: Props) {
                                                             {[
                                                                 1, 2, 3, 4, 5,
                                                             ].map((star) => (
-                                                                <Star
-                                                                    key={star}
-                                                                    className={`h-4 w-4 ${
-                                                                        star <=
-                                                                        Math.round(
-                                                                            result.average_rating,
-                                                                        )
-                                                                            ? 'fill-yellow-400 text-yellow-400'
-                                                                            : 'text-gray-300'
-                                                                    }`}
-                                                                />
+                                                                <Star key={star} className={`h-4 w-4 ${star <= Math.round(result.average_rating) ? 'fill-primary text-primary' : 'text-muted-foreground/40'}`} />
                                                             ))}
                                                         </div>
                                                         <span className="text-lg font-bold">
@@ -325,17 +312,7 @@ export default function SessionResults({ session, results }: Props) {
                                                                             (
                                                                                 star,
                                                                             ) => (
-                                                                                <Star
-                                                                                    key={
-                                                                                        star
-                                                                                    }
-                                                                                    className={`h-3 w-3 ${
-                                                                                        star <=
-                                                                                        review.rating
-                                                                                            ? 'fill-yellow-400 text-yellow-400'
-                                                                                            : 'text-gray-300'
-                                                                                    }`}
-                                                                                />
+                                                                                <Star key={star} className={`h-3 w-3 ${star <= review.rating ? 'fill-primary text-primary' : 'text-muted-foreground/40'}`} />
                                                                             ),
                                                                         )}
                                                                     </div>
