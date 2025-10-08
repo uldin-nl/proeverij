@@ -33,12 +33,7 @@ window.Echo = new Echo({
     wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
     forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
     path: '/reverb',
-    enabledTransports: ['ws'],
-    auth: {
-        headers: {
-            Authorization: `Bearer ${document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')}`,
-        },
-    },
+    enabledTransports: ['ws', 'wss'],
 });
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
