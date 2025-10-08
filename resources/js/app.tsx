@@ -3,14 +3,12 @@ import '../css/app.css';
 import { createInertiaApp } from '@inertiajs/react';
 import Echo from 'laravel-echo';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import Pusher from 'pusher-js';
 import { createRoot } from 'react-dom/client';
 import { initializeTheme } from './hooks/use-appearance';
 
 // Configure Laravel Echo
 declare global {
     interface Window {
-        Pusher: typeof Pusher;
         Echo: {
             private: (channel: string) => {
                 listen: (
@@ -22,8 +20,6 @@ declare global {
         };
     }
 }
-
-window.Pusher = Pusher;
 
 window.Echo = new Echo({
     broadcaster: 'reverb',
